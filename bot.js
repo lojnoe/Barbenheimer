@@ -1,7 +1,8 @@
 
 const token = '6744615244:AAG2tSYke8D72a6qRNyV6JXck5S2yaPleNM';
-const TMDB_API_KEY = '8a63fbb2c57a126f7542a4862c74f4c4';
+const TMDB_API_KEY = '093638b0b0fe7a94b2f8639adbd43903';
 const TelegramBot = require('node-telegram-bot-api');
+const { Telegraf } = require('telegraf');
 const bot = new TelegramBot(token, { polling: true });
 
 import('node-fetch').then(module => {
@@ -27,8 +28,8 @@ import('node-fetch').then(module => {
                 reply_markup: {
                     inline_keyboard: [
                         [
-                            { text: 'Acción', callback_data: 'accion' },
-                            { text: 'Drama', callback_data: 'drama' },
+                            { text: 'Acción', callback_data: '12' },
+                            { text: 'Drama', callback_data: '18' },
                             { text: 'Comedia', callback_data: 'comedia' },
                             { text: 'Terror', callback_data: 'terror' }
                         ]
@@ -42,8 +43,8 @@ import('node-fetch').then(module => {
         const chatId = query.message.chat.id;
         const messageId = query.message.message_id;
         const data = query.data;
-    
-        if (data === 'accion' || data === 'drama' || data === 'comedia' || data === 'terror') {
+
+        if (data === '12' || data === '18' || data === 'comedia' || data === 'terror') {
             try {
                 const response = await obtenerPeliculasPorGenero(data);
                 const movies = response.results.map(movie => ({
@@ -57,23 +58,23 @@ import('node-fetch').then(module => {
             }
         }
     });
-    
+
     async function mostrarPeliculas(chatId, messageId, movies) {
         let currentIndex = 0;
         const totalMovies = movies.length;
-    
+
         const sendMovie = async (index) => {
             if (index >= 0 && index < totalMovies) {
                 const { title, posterPath } = movies[index];
                 const message = `*${title}*\n(${index + 1}/${totalMovies})`;
-    
+
                 // Enviar el mensaje con el título actualizado
                 await bot.editMessageText(message, {
                     chat_id: chatId,
                     message_id: messageId,
                     parse_mode: 'Markdown'
                 });
-    
+
                 // Enviar la imagen como archivo adjunto y las flechas de navegación
                 if (posterPath) {
                     const imageUrl = encodeURI(posterPath);
@@ -92,9 +93,9 @@ import('node-fetch').then(module => {
                 }
             }
         };
-    
+
         sendMovie(currentIndex);
-    
+
         bot.on('callback_query', async (query) => {
             const data = query.data;
             if (data.startsWith('prev_')) {
@@ -106,14 +107,46 @@ import('node-fetch').then(module => {
             }
         });
     }
-    
+
     function obtenerPeliculasPorGenero(genero) {
+        //https://api.themoviedb.org/3/movie/157336?api_key=093638b0b0fe7a94b2f8639adbd43903
+        // https://api.themoviedb.org/3/discover/movie?api_key=093638b0b0fe7a94b2f8639adbd43903&sort_by=popularity.desc&with_genres=12
+
+        // https://api.themoviedb.org/3/movie/popular?api_key=${TMDB_API_KEY}
         return fetch(`
-        https://api.themoviedb.org/3/movie/popular?api_key=${TMDB_API_KEY}`)
+        https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&sort_by=popularity.desc&with_genres=${genero}
+        `)
             .then(response => response.json());
     }
+    // https://api.themoviedb.org/3/discover/movie?include_adult=false&include_video=true&language=en-US&page=1&sort_by=popularity.desc&with_genres=action?api_key=093638b0b0fe7a94b2f8639adbd43903
 
-    
+    const fs = require('fs');
+
+    // Ruta del archivo que contiene el historial de conversación
+    const conversationHistoryFile = 'conversation_history.txt';
+
+    // Función para borrar el historial de conversación
+    const clearConversationHistory = () => {
+        fs.writeFileSync(conversationHistoryFile, '');
+        console.log('Historial de conversación borrado.');
+    };
+
+    // Llamada para borrar el historial de conversación al iniciar el script
+    clearConversationHistory();
+
+
+    bot.onText(/\/clear/, (msg) => {
+        const chatId = msg.chat.id;
+
+        bot.deleteMessage(chatId, msg.message_id)
+            .then(() => {
+                bot.sendMessage(chatId, 'El historial de chat ha sido borrado.');
+            })
+            .catch((error) => {
+                console.error('Error al borrar el historial de chat:', error);
+                bot.sendMessage(chatId, 'Ocurrió un error al borrar el historial de chat.');
+            });
+    });
 
 }).catch((error) => {
 
