@@ -6,18 +6,26 @@ const { Telegraf } = require('telegraf');
 const bot = new TelegramBot(token, { polling: true });
 
 import('node-fetch').then(module => {
+   
+
+    
+
     bot.onText(/\/start/, (msg) => {
         bot.sendMessage(msg.chat.id, `¡Hola! Soy un bot que te ayuda a encontrar películas o series. Por favor, elige si quieres buscar una serie o una película.`, {
             reply_markup: {
                 inline_keyboard: [
                     [
                         { text: 'Películas', callback_data: 'pelicula' },
-                        { text: 'Series', callback_data: 'serie' }
+                        { text: 'Series', callback_data: 'serie' },
+                        { text: 'Ver películas vistas', callback_data: 'vistas' }
                     ]
                 ]
             }
         });
     });
+
+
+    // Modificar el evento callback_query para manejar los botones
 
     bot.on('callback_query', (query) => {
         const chatId = query.message.chat.id;
@@ -59,21 +67,18 @@ import('node-fetch').then(module => {
         }
     });
 
-    async function mostrarPeliculas(chatId, messageId, movies) {
+    async function mostrarPeliculas(chatId, messageId, movies, viewedMovies) {
+
         let currentIndex = 0;
         const totalMovies = movies.length;
+        viewedMovies = {};
+        // Inicializar viewedMovies si es undefined
+
 
         const sendMovie = async (index) => {
             if (index >= 0 && index < totalMovies) {
                 const { title, posterPath } = movies[index];
                 const message = `*${title}*\n(${index + 1}/${totalMovies})`;
-
-                // Enviar el mensaje con el título actualizado
-                await bot.editMessageText(message, {
-                    chat_id: chatId,
-                    message_id: messageId,
-                    parse_mode: 'Markdown'
-                });
 
                 // Enviar la imagen como archivo adjunto y las flechas de navegación
                 if (posterPath) {
@@ -85,12 +90,15 @@ import('node-fetch').then(module => {
                             inline_keyboard: [
                                 [
                                     { text: '⬅️', callback_data: `prev_${index}` },
-                                    { text: '➡️', callback_data: `next_${index}` }
+                                    { text: '➡️', callback_data: `next_${index}` },
+                                    { text: 'Marcar como vista', callback_data: `mark_viewed_${index}` },
+                                    { text: 'Salir', callback_data: `salir` }
                                 ]
                             ]
                         }
                     });
                 }
+                
             }
         };
 
@@ -98,7 +106,13 @@ import('node-fetch').then(module => {
 
         bot.on('callback_query', async (query) => {
             const data = query.data;
-            if (data.startsWith('prev_')) {
+            if (data === 'salir') {
+                clearConversationHistory();
+                bot.sendMessage(chatId, 'Saliendo del bot...');
+                bot.sendMessage(chatId, 'Introduce /start para comenzar de nuevo');
+                
+                
+            } else if (data.startsWith('prev_')) {
                 currentIndex = parseInt(data.split('_')[1]) - 1;
                 await sendMovie(currentIndex);
             } else if (data.startsWith('next_')) {
@@ -113,10 +127,12 @@ import('node-fetch').then(module => {
         // https://api.themoviedb.org/3/discover/movie?api_key=093638b0b0fe7a94b2f8639adbd43903&sort_by=popularity.desc&with_genres=12
 
         // https://api.themoviedb.org/3/movie/popular?api_key=${TMDB_API_KEY}
+
+        
         return fetch(`
         https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&sort_by=popularity.desc&with_genres=${genero}
-        `)
-            .then(response => response.json());
+        `).then(response => response.json());
+        
     }
     // https://api.themoviedb.org/3/discover/movie?include_adult=false&include_video=true&language=en-US&page=1&sort_by=popularity.desc&with_genres=action?api_key=093638b0b0fe7a94b2f8639adbd43903
 
@@ -131,22 +147,11 @@ import('node-fetch').then(module => {
         console.log('Historial de conversación borrado.');
     };
 
+
     // Llamada para borrar el historial de conversación al iniciar el script
     clearConversationHistory();
 
 
-    bot.onText(/\/clear/, (msg) => {
-        const chatId = msg.chat.id;
-
-        bot.deleteMessage(chatId, msg.message_id)
-            .then(() => {
-                bot.sendMessage(chatId, 'El historial de chat ha sido borrado.');
-            })
-            .catch((error) => {
-                console.error('Error al borrar el historial de chat:', error);
-                bot.sendMessage(chatId, 'Ocurrió un error al borrar el historial de chat.');
-            });
-    });
 
 }).catch((error) => {
 
