@@ -6,9 +6,9 @@ const { Telegraf } = require('telegraf');
 const bot = new TelegramBot(token, { polling: true });
 
 import('node-fetch').then(module => {
-   
 
-    
+
+
 
     bot.onText(/\/start/, (msg) => {
         bot.sendMessage(msg.chat.id, `¡Hola! Soy un bot que te ayuda a encontrar películas o series. Por favor, elige si quieres buscar una serie o una película.`, {
@@ -54,8 +54,10 @@ import('node-fetch').then(module => {
 
         if (data === '12' || data === '18' || data === 'comedia' || data === 'terror') {
             try {
+
                 const response = await obtenerPeliculasPorGenero(data);
-                const movies = response.results.map(movie => ({
+                let movies = [];
+                movies = response.results.map(movie => ({
                     title: movie.original_title,
                     posterPath: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : null
                 }));
@@ -67,20 +69,18 @@ import('node-fetch').then(module => {
         }
     });
 
-    async function mostrarPeliculas(chatId, messageId, movies, viewedMovies) {
 
-        let currentIndex = 0;
+    async function mostrarPeliculas(chatId, messageId, movies) {
         const totalMovies = movies.length;
-        viewedMovies = {};
-        // Inicializar viewedMovies si es undefined
-
-
+        let currentIndex = 0;
+        console.log(movies);
         const sendMovie = async (index) => {
-            if (index >= 0 && index < totalMovies) {
+            console.log(index);
+            if (index < totalMovies) {
                 const { title, posterPath } = movies[index];
                 const message = `*${title}*\n(${index + 1}/${totalMovies})`;
 
-                // Enviar la imagen como archivo adjunto y las flechas de navegación
+                // Envía la imagen como archivo adjunto y las flechas de navegación
                 if (posterPath) {
                     const imageUrl = encodeURI(posterPath);
                     await bot.sendPhoto(chatId, imageUrl, {
@@ -98,7 +98,6 @@ import('node-fetch').then(module => {
                         }
                     });
                 }
-                
             }
         };
 
@@ -110,8 +109,6 @@ import('node-fetch').then(module => {
                 clearConversationHistory();
                 bot.sendMessage(chatId, 'Saliendo del bot...');
                 bot.sendMessage(chatId, 'Introduce /start para comenzar de nuevo');
-                
-                
             } else if (data.startsWith('prev_')) {
                 currentIndex = parseInt(data.split('_')[1]) - 1;
                 await sendMovie(currentIndex);
@@ -122,17 +119,28 @@ import('node-fetch').then(module => {
         });
     }
 
-    function obtenerPeliculasPorGenero(genero) {
-        //https://api.themoviedb.org/3/movie/157336?api_key=093638b0b0fe7a94b2f8639adbd43903
-        // https://api.themoviedb.org/3/discover/movie?api_key=093638b0b0fe7a94b2f8639adbd43903&sort_by=popularity.desc&with_genres=12
 
-        // https://api.themoviedb.org/3/movie/popular?api_key=${TMDB_API_KEY}
+    //https://api.themoviedb.org/3/movie/157336?api_key=093638b0b0fe7a94b2f8639adbd43903
+    // https://api.themoviedb.org/3/discover/movie?api_key=093638b0b0fe7a94b2f8639adbd43903&sort_by=popularity.desc&with_genres=12
 
-        
-        return fetch(`
-        https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&sort_by=popularity.desc&with_genres=${genero}
-        `).then(response => response.json());
-        
+    // https://api.themoviedb.org/3/movie/popular?api_key=${TMDB_API_KEY}
+
+
+
+
+    let storedResponse;
+
+    async function obtenerPeliculasPorGenero(genero) {
+        // Si hay una respuesta almacenada, borramos su valor
+        if (storedResponse) {
+            storedResponse = undefined;
+        }
+
+        // Realizamos la consulta y almacenamos la respuesta
+        const response = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&sort_by=popularity.desc&with_genres=${genero}`);
+        storedResponse = await response.json();
+
+        return storedResponse;
     }
     // https://api.themoviedb.org/3/discover/movie?include_adult=false&include_video=true&language=en-US&page=1&sort_by=popularity.desc&with_genres=action?api_key=093638b0b0fe7a94b2f8639adbd43903
 
