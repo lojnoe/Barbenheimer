@@ -22,6 +22,7 @@ function botStart() {
                     ]
                 }
             });
+
         });
 
 
@@ -38,12 +39,15 @@ function botStart() {
                             [
                                 { text: 'Acción', callback_data: '12' },
                                 { text: 'Drama', callback_data: '18' },
-                                { text: 'Comedia', callback_data: 'comedia' },
-                                { text: 'Terror', callback_data: 'terror' }
+                                { text: 'Comedia', callback_data: '35' },
+                                { text: 'Terror', callback_data: '27' }
                             ]
                         ]
                     }
                 });
+            }
+            if (data == 'vistas') {
+                mostrarPeliculasVistas(chatId);
             }
         });
 
@@ -52,7 +56,7 @@ function botStart() {
             const messageId = query.message.message_id;
             const data = query.data;
 
-            if (data === '12' || data === '18' || data === 'comedia' || data === 'terror') {
+            if (data === '12' || data === '18' || data === '35' || data === '27') {
                 try {
                     let response = []
                     response = await obtenerPeliculasPorGenero(data);
@@ -158,9 +162,14 @@ function botStart() {
             } else if (data.startsWith('next_')) {
                 currentIndex = parseInt(data.split('_')[1]) + 1;
                 await enviarPelicula(chatId, movies, currentIndex);
+            } else if (data.startsWith('mark_viewed_')) {
+                const index = parseInt(data.split('_')[1]);
+                
+                const { title, posterPath } = movies[index];
+                const message = `${title}`;
+                await guardarPeliculaVista(chatId, message);
             }
         });
-
 
         //https://api.themoviedb.org/3/movie/157336?api_key=093638b0b0fe7a94b2f8639adbd43903
         // https://api.themoviedb.org/3/discover/movie?api_key=093638b0b0fe7a94b2f8639adbd43903&sort_by=popularity.desc&with_genres=12
@@ -200,8 +209,30 @@ function botStart() {
 
         // Llamada para borrar el historial de conversación al iniciar el script
         clearConversationHistory();
+        async function mostrarPeliculasVistas(chatId) {
+            try {
+                // Lee el contenido del archivo de películas vistas
+                const peliculasVistas = fs.readFileSync('peliculas_vistas.txt', 'utf8');
 
+                // Si hay películas vistas, envía el contenido al usuario
+                if (peliculasVistas) {
+                    await bot.sendMessage(chatId, 'Películas vistas:\n' + peliculasVistas);
+                } else {
+                    await bot.sendMessage(chatId, 'No hay películas vistas.');
+                }
+            } catch (error) {
+                console.error('Error al leer el archivo de películas vistas:', error);
+                await bot.sendMessage(chatId, 'Ocurrió un error al obtener las películas vistas.');
+            }
+        }
 
+        async function guardarPeliculaVista(userId, movie) {
+            // Aquí puedes agregar tu lógica para guardar la película o serie vista por el usuario
+            // Por ejemplo, podrías almacenar esta información en una base de datos
+            console.log(movie);
+            // Ejemplo de cómo podrías guardar la película en un archivo de texto
+
+        }
 
     }).catch((error) => {
 
