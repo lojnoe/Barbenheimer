@@ -1,16 +1,17 @@
-
+require('dotenv').config();
 /**
  * Token de acceso del bot de Telegram.
  * @type {string}
  */
-const token = '6744615244:AAG2tSYke8D72a6qRNyV6JXck5S2yaPleNM';
+
+const token = process.env.TOKEN;
 
 /**
  * Clave de la API de The Movie Database (TMDB).
  * @type {string}
  */
-const TMDB_API_KEY = '093638b0b0fe7a94b2f8639adbd43903';
 
+const TMDB_API_KEY = process.env.TMDB_API_KEY;
 /**
  * Importa la librería node-telegram-bot-api para interactuar con el bot de Telegram.
  */
