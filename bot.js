@@ -1,13 +1,46 @@
 
+/**
+ * Token de acceso del bot de Telegram.
+ * @type {string}
+ */
 const token = '6744615244:AAG2tSYke8D72a6qRNyV6JXck5S2yaPleNM';
+
+/**
+ * Clave de la API de The Movie Database (TMDB).
+ * @type {string}
+ */
 const TMDB_API_KEY = '093638b0b0fe7a94b2f8639adbd43903';
+
+/**
+ * Importa la librería node-telegram-bot-api para interactuar con el bot de Telegram.
+ */
 const TelegramBot = require('node-telegram-bot-api');
 
+/**
+ * Crea una instancia del bot de Telegram.
+ * @type {TelegramBot}
+ */
 const bot = new TelegramBot(token, { polling: true });
+
+/**
+ * Array que almacenará las películas obtenidas de la API.
+ * @type {Array<Object>}
+ */
 let movies = [];
+
+/**
+ * Inicia el bot y define las funciones para manejar comandos y eventos.
+ */
+
 function botStart() {
     import('node-fetch').then(module => {
+        // Importa la librería node-fetch para realizar solicitudes HTTP
 
+        /**
+         * Función que maneja el comando /start del bot. Envía un mensaje de bienvenida al usuario y presenta las opciones de búsqueda.
+         * @param {Object} msg - Objeto que representa el mensaje recibido por el bot.
+         */
+        // Enviar mensaje de bienvenida al usuario con las opciones de búsqueda de películas y series
         bot.onText(/\/start/, (msg) => {
             bot.sendMessage(msg.chat.id, `¡Hola! Soy un bot que te ayuda a encontrar películas o series. Por favor, elige si quieres buscar una serie o una película.`, {
                 reply_markup: {
@@ -15,7 +48,7 @@ function botStart() {
                         [
                             { text: 'Películas', callback_data: 'pelicula' },
                             { text: 'Series', callback_data: 'serie' },
-                            
+
                         ]
                     ]
                 }
@@ -24,14 +57,18 @@ function botStart() {
         });
 
 
-        // Modificar el evento callback_query para manejar los botones
-
+        /**
+         * Modifica el evento 'callback_query' para manejar los botones de selección de categoría de películas o series.
+         * @param {object} query - Objeto que representa la consulta callback_query recibida por el bot.
+         */
         bot.on('callback_query', (query) => {
-            const chatId = query.message.chat.id;
-            const data = query.data;
+            const chatId = query.message.chat.id; // ID del chat
+            const data = query.data; // Datos recibidos en la consulta
 
+            // Si el usuario elige buscar películas
             if (data === 'pelicula') {
-                bot.sendMessage(chatId, `¿Qué categoría prefieres peliculas? (Escribe una categoría como acción, drama, comedia, terror, etc.)`, {
+                // Enviar mensaje solicitando la categoría de películas
+                bot.sendMessage(chatId, `¿Qué categoría prefieres para películas? (Escribe una categoría como acción, drama, comedia, terror, etc.)`, {
                     reply_markup: {
                         inline_keyboard: [
                             [
@@ -43,84 +80,98 @@ function botStart() {
                         ]
                     }
                 });
-            } else if (data === 'serie') {
-                console.log("Entra aqui")
-                bot.sendMessage(chatId, `¿Qué categoría prefieres en series? (Escribe una categoría como acción, drama, comedia, terror, etc.)`, {
+            }
+            // Si el usuario elige buscar series
+            else if (data === 'serie') {
+
+                // Enviar mensaje solicitando la categoría de series
+                bot.sendMessage(chatId, `¿Qué categoría prefieres para series? (Escribe una categoría como acción, drama, comedia, terror, etc.)`, {
                     reply_markup: {
                         inline_keyboard: [
                             [
-                                { text: 'Acción & Adventura"', callback_data: '10759' },
-                                { text: 'Animacion', callback_data: '16' },
+                                { text: 'Acción & Aventura', callback_data: '10759' },
+                                { text: 'Animación', callback_data: '16' },
                                 { text: 'Crimen', callback_data: '80' },
-                                { text: 'Sci-Fi & Fantasy"', callback_data: '10765' }
+                                { text: 'Sci-Fi & Fantasy', callback_data: '10765' }
                             ]
                         ]
                     }
                 });
             }
-            
         });
-
+        /**
+         * Maneja el evento 'callback_query' para obtener películas o series según el género seleccionado.
+         * @param {object} query - Objeto que representa la consulta callback_query recibida por el bot.
+         */
         bot.on('callback_query', async (query) => {
-            const chatId = query.message.chat.id;
-            const messageId = query.message.message_id;
-            const data = query.data;
+            const chatId = query.message.chat.id; // ID del chat
+            const messageId = query.message.message_id; // ID del mensaje
+            const data = query.data; // Datos recibidos en la consulta
 
+            // Si los datos son correspondientes a géneros de películas
             if (data === '12' || data === '18' || data === '35' || data === '27') {
                 try {
-                    let response = []
-                    
-                    response = await obtenerDatosPorGenero('movie', data);
-                    movies = [];
-                    
-                    movies = response.results.map(movie => ({
-                        title: movie.original_title,
-                        posterPath: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : null
+                    let response = await obtenerDatosPorGenero('movie', data); // Obtener datos de películas por género
+                    movies = response.results.map(movie => ({ // Mapear los resultados para obtener títulos y rutas de pósteres
+                        title: movie.original_title, // Título de la película
+                        posterPath: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : null // Ruta del póster de la película
                     }));
-                    mostrarPeliculas(chatId, messageId, movies);
+                    mostrarPeliculas(chatId, messageId, movies); // Mostrar películas al usuario
                 } catch (error) {
-                    console.error('Error al obtener películas:', error);
-                    bot.sendMessage(chatId, 'Ocurrió un error al obtener películas.');
+                    console.error('Error al obtener películas:', error); // Manejar errores
+                    bot.sendMessage(chatId, 'Ocurrió un error al obtener películas.'); // Enviar mensaje de error al usuario
                 }
-            } else if (data === '10759' || data === '16' || data === '80' || data === '10765') {
+            }
+            // Si los datos son correspondientes a géneros de series
+            else if (data === '10759' || data === '16' || data === '80' || data === '10765') {
                 try {
-                    let response = []
-                    response = await obtenerDatosPorGenero('tv', data);
-                    movies = [];
-                    movies = response.results.map(movie => ({
-                        title: movie.original_name,
-                        posterPath: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : null
+                    let response = await obtenerDatosPorGenero('tv', data); // Obtener datos de series por género
+                    movies = response.results.map(movie => ({ // Mapear los resultados para obtener títulos y rutas de pósteres
+                        title: movie.original_name, // Título de la serie
+                        posterPath: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : null // Ruta del póster de la serie
                     }));
-                    mostrarPeliculas(chatId, messageId, movies);
+                    mostrarPeliculas(chatId, messageId, movies); // Mostrar series al usuario
                 } catch (error) {
-                    console.error('Error al obtener películas:', error);
-                    bot.sendMessage(chatId, 'Ocurrió un error al obtener películas.');
+                    console.error('Error al obtener series:', error); // Manejar errores
+                    bot.sendMessage(chatId, 'Ocurrió un error al obtener series.'); // Enviar mensaje de error al usuario
                 }
             }
         });
-        async function mostrarPeliculas(chatId, messageId, movies) {
-            let currentIndex = 0;
-            const totalMovies = movies.length;
-            let primerapelicula = true;
 
-            // Función para enviar una película al usuario
+
+
+        /**
+  * Muestra películas al usuario y permite la navegación entre ellas.
+  * @param {number} chatId - ID del chat donde se enviarán las películas.
+  * @param {number} messageId - ID del mensaje donde se mostrarán las películas.
+  * @param {Array<Object>} movies - Array de objetos que representan las películas a mostrar.
+  */
+        async function mostrarPeliculas(chatId, messageId, movies) {
+            let currentIndex = 0; // Índice de la película actualmente mostrada
+            const totalMovies = movies.length; // Total de películas en la lista
+            let primerapelicula = true; // Bandera para controlar si es la primera película mostrada
+
+            /**
+             * Función interna para enviar una película al usuario.
+             * @param {number} index - Índice de la película a enviar.
+             */
             const enviarPelicula = async (index) => {
-                if (index >= 0 && index < totalMovies) {
-                    const { title, posterPath } = movies[index];
-                    const message = `*${title}*\n(${index + 1}/${totalMovies})`;
-                    // Envía la imagen como archivo adjunto y las flechas de navegación
+                if (index >= 0 && index < totalMovies) { // Verifica que el índice esté dentro del rango
+                    const { title, posterPath } = movies[index]; // Obtiene título y ruta del póster de la película
+                    const message = `*${title}*\n(${index + 1}/${totalMovies})`; // Mensaje con el título y número de película
+
+                    // Verifica si hay una ruta de póster válida
                     if (posterPath) {
-                        const imageUrl = encodeURI(posterPath);
-                        await bot.sendPhoto(chatId, imageUrl, {
-                            caption: message,
-                            parse_mode: 'Markdown',
-                            reply_markup: {
+                        const imageUrl = encodeURI(posterPath); // Codifica la URL de la imagen
+                        await bot.sendPhoto(chatId, imageUrl, { // Envia la imagen como archivo adjunto
+                            caption: message, // Texto del mensaje
+                            parse_mode: 'Markdown', // Formato de parseo del mensaje (Markdown)
+                            reply_markup: { // Teclado de navegación
                                 inline_keyboard: [
                                     [
-                                        { text: '⬅️', callback_data: `prev_${index}` },
-                                        { text: '➡️', callback_data: `next_${index}` },
-                                        
-                                        { text: 'Salir', callback_data: `salir` }
+                                        { text: '⬅️', callback_data: `prev_${index}` }, // Botón para ir a la película anterior
+                                        { text: '➡️', callback_data: `next_${index}` }, // Botón para ir a la siguiente película
+                                        { text: 'Salir', callback_data: `salir` } // Botón para salir de la lista de películas
                                     ]
                                 ]
                             }
@@ -129,35 +180,38 @@ function botStart() {
                 }
             };
 
+            // Si es la primera película que se muestra
             if (primerapelicula == true) {
-                // Inicialmente, enviar la primera película
-                primerapelicula = false;
-                await enviarPelicula(currentIndex);
-
+                primerapelicula = false; // Cambia el valor de la bandera
+                await enviarPelicula(currentIndex); // Envia la primera película al usuario
             }
-
-
         }
+
+        /**
+         * Envia una película al usuario con opciones de navegación.
+         * @param {number} chatId - ID del chat donde se enviará la película.
+         * @param {Array<Object>} movies - Array de objetos que representan las películas disponibles.
+         * @param {number} currentIndex - Índice de la película a enviar.
+         */
         async function enviarPelicula(chatId, movies, currentIndex) {
-            const totalMovies = movies.length;
+            const totalMovies = movies.length; // Total de películas en la lista
 
-            if (currentIndex >= 0 && currentIndex < totalMovies) {
-                const { title, posterPath } = movies[currentIndex];
-                const message = `*${title}*\n(${currentIndex + 1}/${totalMovies})`;
+            if (currentIndex >= 0 && currentIndex < totalMovies) { // Verifica que el índice esté dentro del rango
+                const { title, posterPath } = movies[currentIndex]; // Obtiene título y ruta del póster de la película
+                const message = `*${title}*\n(${currentIndex + 1}/${totalMovies})`; // Mensaje con el título y número de película
 
-                // Envía la imagen como archivo adjunto y las flechas de navegación
+                // Verifica si hay una ruta de póster válida
                 if (posterPath) {
-                    const imageUrl = encodeURI(posterPath);
-                    await bot.sendPhoto(chatId, imageUrl, {
-                        caption: message,
-                        parse_mode: 'Markdown',
-                        reply_markup: {
+                    const imageUrl = encodeURI(posterPath); // Codifica la URL de la imagen
+                    await bot.sendPhoto(chatId, imageUrl, { // Envia la imagen como archivo adjunto
+                        caption: message, // Texto del mensaje
+                        parse_mode: 'Markdown', // Formato de parseo del mensaje (Markdown)
+                        reply_markup: { // Teclado de navegación
                             inline_keyboard: [
                                 [
-                                    { text: '⬅️', callback_data: `prev_${currentIndex}` },
-                                    { text: '➡️', callback_data: `next_${currentIndex}` },
-                                    
-                                    { text: 'Salir', callback_data: `salir` }
+                                    { text: '⬅️', callback_data: `prev_${currentIndex}` }, // Botón para ir a la película anterior
+                                    { text: '➡️', callback_data: `next_${currentIndex}` }, // Botón para ir a la siguiente película
+                                    { text: 'Salir', callback_data: `salir` } // Botón para salir de la lista de películas
                                 ]
                             ]
                         }
@@ -166,78 +220,96 @@ function botStart() {
             }
         }
 
-        // Manejar los eventos de callback para la navegación entre películas
+        /**
+         * Maneja los eventos de callback para la navegación entre películas.
+         * @param {object} query - Objeto que contiene los datos de la consulta.
+         */
         bot.on('callback_query', async (query) => {
-            const data = query.data;
-            const chatId = query.message.chat.id;
+            const data = query.data; // Extrae los datos de la consulta
+            const chatId = query.message.chat.id; // Obtiene el ID del chat
 
+            // Maneja las acciones según los datos recibidos
             if (data === 'salir') {
-                clearConversationHistory();
-                await bot.sendMessage(chatId, 'Saliendo del bot...');
-                await bot.sendMessage(chatId, 'Introduce /start para comenzar de nuevo');
+                clearConversationHistory(); // Limpia el historial de conversación
+                await bot.sendMessage(chatId, 'Saliendo del bot...'); // Envia un mensaje de despedida
+                await bot.sendMessage(chatId, 'Introduce /start para comenzar de nuevo'); // Indica cómo comenzar de nuevo
             } else if (data.startsWith('prev_')) {
-                currentIndex = parseInt(data.split('_')[1]) - 1;
-                await enviarPelicula(chatId, movies, currentIndex);
+                const currentIndex = parseInt(data.split('_')[1]) - 1; // Obtiene el índice de la película anterior
+                await enviarPelicula(chatId, movies, currentIndex); // Envia la película anterior al usuario
             } else if (data.startsWith('next_')) {
-                currentIndex = parseInt(data.split('_')[1]) + 1;
-                await enviarPelicula(chatId, movies, currentIndex);
+                const currentIndex = parseInt(data.split('_')[1]) + 1; // Obtiene el índice de la siguiente película
+                await enviarPelicula(chatId, movies, currentIndex); // Envia la siguiente película al usuario
             }
         });
 
         let storedResponses = {};
-
+        /**
+         * Almacena las respuestas de consultas por género para futuras consultas.
+         * @param {string} tipo - Tipo de consulta (película o serie).
+         * @param {string} genero - ID del género de la consulta.
+         * @returns {Promise<Object>} - Respuesta de la consulta.
+         */
         async function obtenerDatosPorGenero(tipo, genero) {
-            const storedResponseKey = `${tipo}_${genero}`;
-            
-            // Si hay una respuesta almacenada, la retornamos directamente
+            const storedResponseKey = `${tipo}_${genero}`; // Genera una clave única para almacenar la respuesta
+
+            // Si hay una respuesta almacenada, la retorna directamente
             if (storedResponses[storedResponseKey]) {
                 return storedResponses[storedResponseKey];
             }
-        
-            // Realizamos la consulta y almacenamos la respuesta
+
+            // Realiza la consulta a la API de TheMovieDB
             const response = await fetch(`https://api.themoviedb.org/3/discover/${tipo}?api_key=${TMDB_API_KEY}&sort_by=popularity.desc&with_genres=${genero}`);
-            const responseData = await response.json();
-            
-            // Almacenamos la respuesta para futuras consultas
+            const responseData = await response.json(); // Obtiene los datos de la respuesta
+
+            // Almacena la respuesta para futuras consultas
             storedResponses[storedResponseKey] = responseData;
-        
-            return responseData;
+
+            return responseData; // Retorna la respuesta de la consulta
         }
-       
+
 
         const fs = require('fs');
 
-        // Ruta del archivo que contiene el historial de conversación
+        /**
+         * Ruta del archivo que contiene el historial de conversación.
+         * @type {string}
+         */
         const conversationHistoryFile = 'conversation_history.txt';
 
-        // Función para borrar el historial de conversación
+        /**
+         * Borra el historial de conversación almacenado en un archivo.
+         */
         const clearConversationHistory = () => {
-            fs.writeFileSync(conversationHistoryFile, '');
-            console.log('Historial de conversación borrado.');
+            fs.writeFileSync(conversationHistoryFile, ''); // Borra el contenido del archivo
+            console.log('Historial de conversación borrado.'); // Imprime un mensaje de confirmación en la consola
         };
-
 
         // Llamada para borrar el historial de conversación al iniciar el script
         clearConversationHistory();
 
+        /**
+         * Maneja el comando /help para mostrar un mensaje de ayuda detallado al usuario.
+         * @param {Object} msg - Objeto que representa el mensaje recibido por el bot.
+         */
         bot.onText(/\/help/, (msg) => {
-            const chatId = msg.chat.id;
+            const chatId = msg.chat.id; // Obtiene el ID del chat
             const helpMessage = `
-        ℹ️ **Ayuda - Barbenheimer Bot**
-        
-        Este bot te ayuda a encontrar películas o series según tus preferencias buscando las peliculas del.
-        
-        **Comandos Disponibles:**
-        /start - Inicia el bot y muestra las opciones disponibles.
-        /help - Muestra este mensaje de ayuda.
-        
-        **Comando /start:**
-        El comando /start inicia el bot y muestra las opciones disponibles para buscar películas o series. Puedes seleccionar entre buscar películas o series y luego elegir una categoría como acción, drama, comedia, terror, etc.
-        
-        ¡Disfruta explorando y encontrando nuevas películas y series con Barbenheimer Bot!
-        `;
-            bot.sendMessage(chatId, helpMessage, { parse_mode: 'Markdown' });
+            ℹ️ **Ayuda - Barbenheimer Bot**
+
+            Este bot te ayuda a encontrar películas o series según tus preferencias buscando las peliculas del momento.
+
+            **Comandos Disponibles:**
+            /start - Inicia el bot y muestra las opciones disponibles.
+            /help - Muestra este mensaje de ayuda.
+
+            **Comando /start:**
+            El comando /start inicia el bot y muestra las opciones disponibles para buscar películas o series. Puedes seleccionar entre buscar películas o series y luego elegir una categoría como acción, drama, comedia, terror, etc.
+
+            ¡Disfruta explorando y encontrando nuevas películas y series con Barbenheimer Bot!
+            `;
+            bot.sendMessage(chatId, helpMessage, { parse_mode: 'Markdown' }); // Envía el mensaje de ayuda al chat
         });
+
     }).catch((error) => {
 
         console.log("No se ha podido conectar");
@@ -247,9 +319,3 @@ function botStart() {
 
 botStart();
 
-
-//https://api.themoviedb.org/3/movie/157336?api_key=093638b0b0fe7a94b2f8639adbd43903
-        // https://api.themoviedb.org/3/discover/movie?api_key=093638b0b0fe7a94b2f8639adbd43903&sort_by=popularity.desc&with_genres=12
-
-        // https://api.themoviedb.org/3/movie/popular?api_key=${TMDB_API_KEY}
-         // https://api.themoviedb.org/3/discover/movie?include_adult=false&include_video=true&language=en-US&page=1&sort_by=popularity.desc&with_genres=action?api_key=093638b0b0fe7a94b2f8639adbd43903
