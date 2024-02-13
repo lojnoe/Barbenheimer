@@ -8,8 +8,6 @@ let movies = [];
 function botStart() {
     import('node-fetch').then(module => {
 
-
-
         bot.onText(/\/start/, (msg) => {
             bot.sendMessage(msg.chat.id, `¡Hola! Soy un bot que te ayuda a encontrar películas o series. Por favor, elige si quieres buscar una serie o una película.`, {
                 reply_markup: {
@@ -17,7 +15,7 @@ function botStart() {
                         [
                             { text: 'Películas', callback_data: 'pelicula' },
                             { text: 'Series', callback_data: 'serie' },
-                            { text: 'Ver películas vistas', callback_data: 'vistas' }
+                            
                         ]
                     ]
                 }
@@ -32,8 +30,8 @@ function botStart() {
             const chatId = query.message.chat.id;
             const data = query.data;
 
-            if (data === 'pelicula' || data === 'serie') {
-                bot.sendMessage(chatId, `¿Qué categoría prefieres? (Escribe una categoría como acción, drama, comedia, terror, etc.)`, {
+            if (data === 'pelicula') {
+                bot.sendMessage(chatId, `¿Qué categoría prefieres peliculas? (Escribe una categoría como acción, drama, comedia, terror, etc.)`, {
                     reply_markup: {
                         inline_keyboard: [
                             [
@@ -45,10 +43,22 @@ function botStart() {
                         ]
                     }
                 });
+            } else if (data === 'serie') {
+                console.log("Entra aqui")
+                bot.sendMessage(chatId, `¿Qué categoría prefieres en series? (Escribe una categoría como acción, drama, comedia, terror, etc.)`, {
+                    reply_markup: {
+                        inline_keyboard: [
+                            [
+                                { text: 'Acción & Adventura"', callback_data: '10759' },
+                                { text: 'Animacion', callback_data: '16' },
+                                { text: 'Crimen', callback_data: '80' },
+                                { text: 'Sci-Fi & Fantasy"', callback_data: '10765' }
+                            ]
+                        ]
+                    }
+                });
             }
-            if (data == 'vistas') {
-                mostrarPeliculasVistas(chatId);
-            }
+            
         });
 
         bot.on('callback_query', async (query) => {
@@ -59,9 +69,10 @@ function botStart() {
             if (data === '12' || data === '18' || data === '35' || data === '27') {
                 try {
                     let response = []
-                    response = await obtenerPeliculasPorGenero(data);
-
+                    
+                    response = await obtenerDatosPorGenero('movie', data);
                     movies = [];
+                    
                     movies = response.results.map(movie => ({
                         title: movie.original_title,
                         posterPath: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : null
@@ -71,15 +82,27 @@ function botStart() {
                     console.error('Error al obtener películas:', error);
                     bot.sendMessage(chatId, 'Ocurrió un error al obtener películas.');
                 }
+            } else if (data === '10759' || data === '16' || data === '80' || data === '10765') {
+                try {
+                    let response = []
+                    response = await obtenerDatosPorGenero('tv', data);
+                    movies = [];
+                    movies = response.results.map(movie => ({
+                        title: movie.original_name,
+                        posterPath: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : null
+                    }));
+                    mostrarPeliculas(chatId, messageId, movies);
+                } catch (error) {
+                    console.error('Error al obtener películas:', error);
+                    bot.sendMessage(chatId, 'Ocurrió un error al obtener películas.');
+                }
             }
         });
-
-
         async function mostrarPeliculas(chatId, messageId, movies) {
             let currentIndex = 0;
             const totalMovies = movies.length;
             let primerapelicula = true;
-            
+
             // Función para enviar una película al usuario
             const enviarPelicula = async (index) => {
                 if (index >= 0 && index < totalMovies) {
@@ -96,7 +119,7 @@ function botStart() {
                                     [
                                         { text: '⬅️', callback_data: `prev_${index}` },
                                         { text: '➡️', callback_data: `next_${index}` },
-                                        { text: 'Marcar como vista', callback_data: `mark_viewed_${index}` },
+                                        
                                         { text: 'Salir', callback_data: `salir` }
                                     ]
                                 ]
@@ -105,8 +128,6 @@ function botStart() {
                     }
                 }
             };
-
-
 
             if (primerapelicula == true) {
                 // Inicialmente, enviar la primera película
@@ -135,7 +156,7 @@ function botStart() {
                                 [
                                     { text: '⬅️', callback_data: `prev_${currentIndex}` },
                                     { text: '➡️', callback_data: `next_${currentIndex}` },
-                                    { text: 'Marcar como vista', callback_data: `mark_viewed_${currentIndex}` },
+                                    
                                     { text: 'Salir', callback_data: `salir` }
                                 ]
                             ]
@@ -160,43 +181,29 @@ function botStart() {
             } else if (data.startsWith('next_')) {
                 currentIndex = parseInt(data.split('_')[1]) + 1;
                 await enviarPelicula(chatId, movies, currentIndex);
-            } else if (data.startsWith('mark_viewed_')) {
-                console.log(parseInt(data.split('_')[1]));
-                const index = parseInt(data.split('_')[1]);
-                console.log(index);
-                if (index >= 0 && index < movies.length) {
-                    const { title } = movies[index];
-                    await guardarPeliculaVista(chatId, title); // Enviar el ID del chat y el título de la película
-                    console.log('Título de la película marcada como vista:', title); // Mostrar el título de la película en la consola
-                } else {
-                    console.error('Índice de película fuera de rango:', index);
-                }
             }
         });
 
-        //https://api.themoviedb.org/3/movie/157336?api_key=093638b0b0fe7a94b2f8639adbd43903
-        // https://api.themoviedb.org/3/discover/movie?api_key=093638b0b0fe7a94b2f8639adbd43903&sort_by=popularity.desc&with_genres=12
+        let storedResponses = {};
 
-        // https://api.themoviedb.org/3/movie/popular?api_key=${TMDB_API_KEY}
-
-
-
-
-        let storedResponse;
-
-        async function obtenerPeliculasPorGenero(genero) {
-            // Si hay una respuesta almacenada, borramos su valor
-            if (storedResponse) {
-                storedResponse = undefined;
+        async function obtenerDatosPorGenero(tipo, genero) {
+            const storedResponseKey = `${tipo}_${genero}`;
+            
+            // Si hay una respuesta almacenada, la retornamos directamente
+            if (storedResponses[storedResponseKey]) {
+                return storedResponses[storedResponseKey];
             }
-
+        
             // Realizamos la consulta y almacenamos la respuesta
-            const response = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&sort_by=popularity.desc&with_genres=${genero}`);
-            storedResponse = await response.json();
-
-            return storedResponse;
+            const response = await fetch(`https://api.themoviedb.org/3/discover/${tipo}?api_key=${TMDB_API_KEY}&sort_by=popularity.desc&with_genres=${genero}`);
+            const responseData = await response.json();
+            
+            // Almacenamos la respuesta para futuras consultas
+            storedResponses[storedResponseKey] = responseData;
+        
+            return responseData;
         }
-        // https://api.themoviedb.org/3/discover/movie?include_adult=false&include_video=true&language=en-US&page=1&sort_by=popularity.desc&with_genres=action?api_key=093638b0b0fe7a94b2f8639adbd43903
+       
 
         const fs = require('fs');
 
@@ -212,37 +219,25 @@ function botStart() {
 
         // Llamada para borrar el historial de conversación al iniciar el script
         clearConversationHistory();
-        async function mostrarPeliculasVistas(chatId) {
-            try {
-                // Lee el contenido del archivo de películas vistas
-                const peliculasVistas = fs.readFileSync('peliculas_vistas.txt', 'utf8');
 
-                // Si hay películas vistas, envía el contenido al usuario
-                if (peliculasVistas) {
-                    await bot.sendMessage(chatId, 'Películas vistas:\n' + peliculasVistas);
-                } else {
-                    await bot.sendMessage(chatId, 'No hay películas vistas.');
-                }
-            } catch (error) {
-                console.error('Error al leer el archivo de películas vistas:', error);
-                await bot.sendMessage(chatId, 'Ocurrió un error al obtener las películas vistas.');
-            }
-        }
-
-        async function guardarPeliculaVista(userId, movie) {
-            const peliculaVista = `Chat ID: ${chatId}, Película: ${movieTitle}\n`;
-
-            // Abrir el archivo en modo de anexar (append) para agregar la película vista
-            fs.appendFile('peliculas_vistas.txt', peliculaVista, (err) => {
-                if (err) {
-                    console.error('Error al guardar la película vista:', err);
-                } else {
-                    console.log('Película vista guardada correctamente.');
-                }
-            });
-
-        }
-
+        bot.onText(/\/help/, (msg) => {
+            const chatId = msg.chat.id;
+            const helpMessage = `
+        ℹ️ **Ayuda - Barbenheimer Bot**
+        
+        Este bot te ayuda a encontrar películas o series según tus preferencias buscando las peliculas del.
+        
+        **Comandos Disponibles:**
+        /start - Inicia el bot y muestra las opciones disponibles.
+        /help - Muestra este mensaje de ayuda.
+        
+        **Comando /start:**
+        El comando /start inicia el bot y muestra las opciones disponibles para buscar películas o series. Puedes seleccionar entre buscar películas o series y luego elegir una categoría como acción, drama, comedia, terror, etc.
+        
+        ¡Disfruta explorando y encontrando nuevas películas y series con Barbenheimer Bot!
+        `;
+            bot.sendMessage(chatId, helpMessage, { parse_mode: 'Markdown' });
+        });
     }).catch((error) => {
 
         console.log("No se ha podido conectar");
@@ -251,3 +246,10 @@ function botStart() {
 
 
 botStart();
+
+
+//https://api.themoviedb.org/3/movie/157336?api_key=093638b0b0fe7a94b2f8639adbd43903
+        // https://api.themoviedb.org/3/discover/movie?api_key=093638b0b0fe7a94b2f8639adbd43903&sort_by=popularity.desc&with_genres=12
+
+        // https://api.themoviedb.org/3/movie/popular?api_key=${TMDB_API_KEY}
+         // https://api.themoviedb.org/3/discover/movie?include_adult=false&include_video=true&language=en-US&page=1&sort_by=popularity.desc&with_genres=action?api_key=093638b0b0fe7a94b2f8639adbd43903
