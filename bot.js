@@ -79,14 +79,12 @@ function botStart() {
             let currentIndex = 0;
             const totalMovies = movies.length;
             let primerapelicula = true;
-            console.log(movies);
+            
             // Función para enviar una película al usuario
             const enviarPelicula = async (index) => {
                 if (index >= 0 && index < totalMovies) {
                     const { title, posterPath } = movies[index];
-                    console.log(title, posterPath);
                     const message = `*${title}*\n(${index + 1}/${totalMovies})`;
-                    console.log("mensaje " + message);
                     // Envía la imagen como archivo adjunto y las flechas de navegación
                     if (posterPath) {
                         const imageUrl = encodeURI(posterPath);
@@ -163,11 +161,16 @@ function botStart() {
                 currentIndex = parseInt(data.split('_')[1]) + 1;
                 await enviarPelicula(chatId, movies, currentIndex);
             } else if (data.startsWith('mark_viewed_')) {
+                console.log(parseInt(data.split('_')[1]));
                 const index = parseInt(data.split('_')[1]);
-                
-                const { title, posterPath } = movies[index];
-                const message = `${title}`;
-                await guardarPeliculaVista(chatId, message);
+                console.log(index);
+                if (index >= 0 && index < movies.length) {
+                    const { title } = movies[index];
+                    await guardarPeliculaVista(chatId, title); // Enviar el ID del chat y el título de la película
+                    console.log('Título de la película marcada como vista:', title); // Mostrar el título de la película en la consola
+                } else {
+                    console.error('Índice de película fuera de rango:', index);
+                }
             }
         });
 
@@ -227,10 +230,16 @@ function botStart() {
         }
 
         async function guardarPeliculaVista(userId, movie) {
-            // Aquí puedes agregar tu lógica para guardar la película o serie vista por el usuario
-            // Por ejemplo, podrías almacenar esta información en una base de datos
-            console.log(movie);
-            // Ejemplo de cómo podrías guardar la película en un archivo de texto
+            const peliculaVista = `Chat ID: ${chatId}, Película: ${movieTitle}\n`;
+
+            // Abrir el archivo en modo de anexar (append) para agregar la película vista
+            fs.appendFile('peliculas_vistas.txt', peliculaVista, (err) => {
+                if (err) {
+                    console.error('Error al guardar la película vista:', err);
+                } else {
+                    console.log('Película vista guardada correctamente.');
+                }
+            });
 
         }
 
