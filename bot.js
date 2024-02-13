@@ -38,9 +38,13 @@ function botStart() {
         // Importa la librería node-fetch para realizar solicitudes HTTP
 
         /**
-         * Función que maneja el comando /start del bot. Envía un mensaje de bienvenida al usuario y presenta las opciones de búsqueda.
-         * @param {Object} msg - Objeto que representa el mensaje recibido por el bot.
-         */
+ * 
+ * @function
+ * @param {RegExp} /\/start/ - Expresión regular que coincide con el comando /start.
+ * @param {Function} callback - Función de retorno de llamada que se ejecuta cuando se recibe el comando /start.
+ * @param {Object} msg - Objeto que representa el mensaje recibido por el bot.
+ * @returns {void}
+ */
         // Enviar mensaje de bienvenida al usuario con las opciones de búsqueda de películas y series
         bot.onText(/\/start/, (msg) => {
             bot.sendMessage(msg.chat.id, `¡Hola! Soy un bot que te ayuda a encontrar películas o series. Por favor, elige si quieres buscar una serie o una película.`, {
@@ -59,8 +63,10 @@ function botStart() {
 
 
         /**
-         * Modifica el evento 'callback_query' para manejar los botones de selección de categoría de películas o series.
+         * 
+         * @function handleCategorySelection
          * @param {object} query - Objeto que representa la consulta callback_query recibida por el bot.
+         * @description Esta función maneja el evento 'callback_query' para mostrar al usuario las opciones de categorías de películas o series y procesar su selección.
          */
         bot.on('callback_query', (query) => {
             const chatId = query.message.chat.id; // ID del chat
@@ -102,7 +108,9 @@ function botStart() {
         });
         /**
          * Maneja el evento 'callback_query' para obtener películas o series según el género seleccionado.
+         * @function handleCallbackQuery
          * @param {object} query - Objeto que representa la consulta callback_query recibida por el bot.
+         * @description Esta función maneja el evento 'callback_query' para obtener películas o series según el género seleccionado por el usuario y mostrarlas en el chat.
          */
         bot.on('callback_query', async (query) => {
             const chatId = query.message.chat.id; // ID del chat
@@ -142,10 +150,12 @@ function botStart() {
 
 
         /**
-  * Muestra películas al usuario y permite la navegación entre ellas.
+  * 
+  * @function mostrarPeliculas
   * @param {number} chatId - ID del chat donde se enviarán las películas.
   * @param {number} messageId - ID del mensaje donde se mostrarán las películas.
   * @param {Array<Object>} movies - Array de objetos que representan las películas a mostrar.
+  * @description Esta función muestra películas al usuario y permite la navegación entre ellas mediante botones interactivos.
   */
         async function mostrarPeliculas(chatId, messageId, movies) {
             let currentIndex = 0; // Índice de la película actualmente mostrada
@@ -189,10 +199,12 @@ function botStart() {
         }
 
         /**
-         * Envia una película al usuario con opciones de navegación.
+         *
+         * @function enviarPelicula
          * @param {number} chatId - ID del chat donde se enviará la película.
          * @param {Array<Object>} movies - Array de objetos que representan las películas disponibles.
          * @param {number} currentIndex - Índice de la película a enviar.
+         * @description Esta función envía una película al usuario junto con opciones de navegación, como ir a la película anterior, siguiente o salir de la lista de películas.
          */
         async function enviarPelicula(chatId, movies, currentIndex) {
             const totalMovies = movies.length; // Total de películas en la lista
@@ -222,9 +234,10 @@ function botStart() {
         }
 
         /**
-         * Maneja los eventos de callback para la navegación entre películas.
-         * @param {object} query - Objeto que contiene los datos de la consulta.
-         */
+ * Maneja los eventos de callback para la navegación entre películas.
+ * @function handleNavigationCallback
+ * @param {object} query - Objeto que contiene los datos de la consulta.
+ */
         bot.on('callback_query', async (query) => {
             const data = query.data; // Extrae los datos de la consulta
             const chatId = query.message.chat.id; // Obtiene el ID del chat
@@ -244,12 +257,16 @@ function botStart() {
         });
 
         let storedResponses = {};
+
         /**
-         * Almacena las respuestas de consultas por género para futuras consultas.
-         * @param {string} tipo - Tipo de consulta (película o serie).
-         * @param {string} genero - ID del género de la consulta.
-         * @returns {Promise<Object>} - Respuesta de la consulta.
-         */
+     * @function obtenerDatosPorGenero
+     * @description Almacena las respuestas de consultas por género para futuras consultas.
+     * 
+     * @param {string} tipo - El tipo de consulta (película o serie).
+     * @param {string} genero - El ID del género de la consulta.
+     * @returns {Promise<Object>} - Una promesa que se resuelve con los datos de la respuesta de la consulta.
+     *                            Si la consulta no tiene éxito, la promesa se rechaza con un error.
+     */
         async function obtenerDatosPorGenero(tipo, genero) {
             const storedResponseKey = `${tipo}_${genero}`; // Genera una clave única para almacenar la respuesta
 
@@ -268,7 +285,6 @@ function botStart() {
             return responseData; // Retorna la respuesta de la consulta
         }
 
-
         const fs = require('fs');
 
         /**
@@ -278,7 +294,8 @@ function botStart() {
         const conversationHistoryFile = 'conversation_history.txt';
 
         /**
-         * Borra el historial de conversación almacenado en un archivo.
+         * @function clearConversationHistory
+         * @description Borra el historial de conversación almacenado en un archivo.
          */
         const clearConversationHistory = () => {
             fs.writeFileSync(conversationHistoryFile, ''); // Borra el contenido del archivo
@@ -289,9 +306,11 @@ function botStart() {
         clearConversationHistory();
 
         /**
-         * Maneja el comando /help para mostrar un mensaje de ayuda detallado al usuario.
-         * @param {Object} msg - Objeto que representa el mensaje recibido por el bot.
-         */
+          * @function onHelpCommand
+          * @description Maneja el comando /help para mostrar un mensaje de ayuda detallado al usuario.
+          * 
+          * @param {Object} msg - Objeto que representa el mensaje recibido por el bot.
+          */
         bot.onText(/\/help/, (msg) => {
             const chatId = msg.chat.id; // Obtiene el ID del chat
             const helpMessage = `
